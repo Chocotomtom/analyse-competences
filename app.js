@@ -1,8 +1,13 @@
 function App() {
-    const [data, setData] = React.useState(null);
+    // Charger les données depuis le localStorage au démarrage
+    const [data, setData] = React.useState(() => {
+        const savedData = localStorage.getItem('competencesData');
+        return savedData ? JSON.parse(savedData) : null;
+    });
     const [selectedType, setSelectedType] = React.useState('all');
     const [showCompanies, setShowCompanies] = React.useState(true);
-    const [view, setView] = React.useState('upload'); // 'upload' ou 'analysis'
+    // Si des données sont présentes, commencer directement en mode analyse
+    const [view, setView] = React.useState(localStorage.getItem('competencesData') ? 'analysis' : 'upload');
 
     const handleFileUpload = (event) => {
         const file = event.target.files[0];
@@ -13,11 +18,23 @@ function App() {
             const workbook = XLSX.read(data, { type: 'array' });
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+            
+            // Sauvegarder les données dans le localStorage
+            localStorage.setItem('competencesData', JSON.stringify(jsonData));
             setData(jsonData);
             setView('analysis');
         };
 
         reader.readAsArrayBuffer(file);
+    };
+
+    // Fonction pour effacer les données
+    const clearData = () => {
+        if (window.confirm('Voulez-vous vraiment effacer toutes les données?')) {
+            localStorage.removeItem('competencesData');
+            setData(null);
+            setView('upload');
+        }
     };
 
     const CompetenceTable = ({ data, selectedType, showCompanies }) => {
@@ -96,6 +113,7 @@ function App() {
                     onChange={handleFileUpload}
                     className="w-full p-2 border rounded"
                 />
+                <p className="mt-2 text-sm text-gray-500">Les données seront sauvegardées localement</p>
             </div>
         </div>
     );
@@ -113,12 +131,12 @@ function App() {
                     <FileUpload />
                 ) : (
                     <div>
-                        <div className="flex gap-4 mb-6">
+                        <div className="flex flex-wrap gap-4 mb-6">
                             <button
                                 onClick={() => setView('upload')}
-                                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                             >
-                                ← Retour à l'import
+                                Importer un nouveau fichier
                             </button>
                             <select
                                 className="border p-2 rounded"
@@ -132,9 +150,15 @@ function App() {
                             </select>
                             <button
                                 onClick={() => setShowCompanies(!showCompanies)}
-                                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                             >
                                 {showCompanies ? 'Masquer' : 'Afficher'} les entreprises
+                            </button>
+                            <button
+                                onClick={clearData}
+                                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                            >
+                                Effacer les données
                             </button>
                         </div>
                         <CompetenceTable
